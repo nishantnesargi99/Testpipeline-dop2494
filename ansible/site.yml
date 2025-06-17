@@ -1,0 +1,51 @@
+---
+- name: Provision EC2 instance and deploy application
+  hosts: app
+  become: yes
+  vars:
+    app_repo: "https://oauth2:{{ lookup('env', 'ANSIBLE_GIT_TOKEN') }}@github.com/claymcenter/notification-service.git"
+    app_dir: "/opt/notification-service"
+    docker_compose_file: "docker-compose.yml"
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+    - name: Install required packages
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+          - curl
+          - gnupg
+          - ca-certificates
+          - lsb-release
+        state: present
+    - name: Enable and start Docker
+      systemd:
+        name: docker
+        enabled: true
+        state: started
+    - name: Add OpenResty GPG key
+      apt_key:
+        url: "https://openresty.org/package/pubkey.gpg"
+        state: present
+    - name: Add OpenResty APT repo
+      apt_repository:
+        repo: "deb http://openresty.org/package/ubuntu $(lsb_release -sc) main"
+        state: present filename: "openresty"
+    - name: Install OpenResty
+      apt:
+        name: openresty
+        state: present
+        update_cache: yes
+    - name: Clone the application repository
+      git:
+        repo: "{{ app_repo }}"
+        dest: "{{ app_dir }}"
+        version: HEAD
+    - name: Run docker-compose up
+      shell: |
+        sudo docker-compose -f {{ app_dir }}/{{ docker_compose_file }} down || true
+        sudo docker-compose -f {{ app_dir }}/{{ docker_compose_file }} up -d
+      args:
+        chdir: "{{ app_dir }}"

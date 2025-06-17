@@ -1,0 +1,94 @@
+pipeline {
+    agent any
+    environment {
+        TF_DIR = "terraform"
+        ANSIBLE_DIR = "ansible"
+        SSH_KEY = credentials('ec2-ssh-key')     // Private key for SSH
+        GIT_TOKEN = credentials('github-token')  // GitHub token for cloning private repo
+    }
+    stages {
+        stage('Terraform Init') {
+            agent {
+                docker {
+                    image 'hashicorp/terraform:1.7.5'
+                    args '-v $WORKSPACE:/workspace -u root'
+                }
+            }
+            steps {
+                dir("${TF_DIR}") {
+                    sh 'sudo terraform init'
+                }
+            }
+        }
+        stage('Terraform Apply') {
+            agent {
+                docker {
+                    image 'hashicorp/terraform:1.7.5'
+                    args '-v $WORKSPACE:/workspace -u root'
+                }
+            }
+            steps {
+                script {
+                    try {
+                        dir("${TF_DIR}") {
+                            sh 'sudo terraform apply -auto-approve'
+                        }
+                        env.INSTANCE_CREATED = "true"
+                    } catch (err) {
+                        echo ":x:: Terraform Apply failed: ${err}"
+                        error("Stopping pipeline due to Terraform failure")
+                    }
+                }
+            }
+        }
+        stage('Generate Inventory') {
+            steps {
+                script {
+                    try {
+                        def ip = sh(script: "sudo terraform -chdir=${TF_DIR} output -raw instance_ip", returnStdout: true).trim()
+                        writeFile file: "${ANSIBLE_DIR}/inventory.ini", text: """[app]\n${ip} ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_KEY}"""
+                        echo ":white_check_mark:: Generated inventory with IP: ${ip}"
+                    } catch (err) {
+                        echo ":x:: Inventory generation failed: ${err}"
+                        error("Stopping pipeline due to inventory failure")
+                    }
+                }
+            }
+        }
+        stage('Provision & Deploy (Ansible)') {
+            agent {
+                docker {
+                    image 'willhallonline/ansible:latest'
+                    args '-v $WORKSPACE:/workspace -u root'
+                }
+            }
+            steps {
+                script {
+                    try {
+                        sh "ANSIBLE_GIT_TOKEN=${GIT_TOKEN} ansible-playbook -vvv -i ${ANSIBLE_DIR}/inventory.ini ${ANSIBLE_DIR}/site.yml"
+                    } catch (err) {
+                        echo ":x:: Ansible Provisioning/Deployment failed: ${err}"
+                        error("Stopping pipeline due to Ansible failure")
+                    }
+                }
+            }
+        }
+    }
+    post {
+        failure {
+            script {
+                if (env.INSTANCE_CREATED == "true") {
+                    echo ":broom:: Cleanup: Destroying EC2 instance..."
+                    dir("${TF_DIR}") {
+                        sh 'sudo terraform destroy -auto-approve || true'
+                    }
+                } else {
+                    echo ":information_source:: No EC2 created, skipping destroy"
+                }
+            }
+        }
+        success {
+            echo ":white_check_mark:: Pipeline complete. Infrastructure and App deployed."
+        }
+    }
+}

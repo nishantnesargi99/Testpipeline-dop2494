@@ -1,0 +1,6 @@
+notes:(to do)
+use sudo 
+use images for ansible and terraform
+update all 3 files 
+iam role and aws access key and secret key query
+
