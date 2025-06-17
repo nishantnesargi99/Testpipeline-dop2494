@@ -4,7 +4,7 @@ pipeline {
         TF_DIR = "terraform"
         ANSIBLE_DIR = "ansible"
         SSH_KEY = credentials('ec2-ssh-key')     // Private key for SSH
-        GIT_TOKEN = credentials('github-token')  // GitHub token for cloning private repo
+        GIT_TOKEN = credentials('github-access')  // GitHub token for cloning private repo
     }
     stages {
         stage('Terraform Init') {
