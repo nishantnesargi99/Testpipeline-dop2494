@@ -29,8 +29,8 @@ data "aws_security_group" "default" {
 }
 # EC2 Instance
 resource "aws_instance" "app_server" {
-  ami                    = "ami-019eeff96c2865995"
-  instance_type          = "t3.micro"
+  ami                    = "ami-0eb527f04b4b6c215"
+  instance_type          = "t4g.micro"
   key_name               = var.existing_key_name
   subnet_id              = data.aws_subnet.default_az2a.id
   vpc_security_group_ids = [data.aws_security_group.default.id]
