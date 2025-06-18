@@ -1,16 +1,20 @@
 provider "aws" {
-  region = "us-east-2" 
+  region = "us-east-2"
 }
-# Fetch the default VPC
+# Get default VPC
 data "aws_vpc" "default" {
   default = true
 }
-# Fetch one of the default subnets in that VPC (you can fetch all if needed)
-data "aws_subnet_ids" "default" {
-  vpc_id = data.aws_vpc.default.id
-}
+# Get a default subnet in that VPC
 data "aws_subnet" "default" {
-  id = tolist(data.aws_subnet_ids.default.ids)[0] 
+  filter {
+    name   = "default-for-az"
+    values = ["true"]
+  }
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
 }
 resource "aws_instance" "app_server" {
   ami                    = "ami-019eeff96c2865995"
