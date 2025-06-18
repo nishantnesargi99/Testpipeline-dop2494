@@ -4,7 +4,7 @@
   become: yes
   vars:
     app_repo: "https://oauth2:{{ lookup('env', 'ANSIBLE_GIT_TOKEN') }}@github.com/claymcenter/notification-service.git"
-    app_dir: "/opt/notification-service"
+    app_dir: "/webapps/notification-service"
     docker_compose_file: "docker-compose.yml"
   tasks:
     - name: Update apt cache
