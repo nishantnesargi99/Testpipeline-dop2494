@@ -3,39 +3,19 @@ pipeline {
     environment {
         TF_DIR = "terraform"
         ANSIBLE_DIR = "ansible"
-        GIT_TOKEN = credentials('github-access')  // GitHub token for cloning private repo
+        GIT_TOKEN = credentials('github-access')
     }
     stages {
-        stage('Terraform Init') {
-            agent {
-                docker {
-                    image 'hashicorp/terraform:1.7.5'
-                    args '-v $WORKSPACE:/workspace -u root'
-                }
-            }
-            steps {
-                dir("${TF_DIR}") {
-                    sh 'sudo terraform init'
-                }
-            }
-        }
-        stage('Terraform Apply') {
-            agent {
-                docker {
-                    image 'hashicorp/terraform:1.7.5'
-                    args '-v $WORKSPACE:/workspace -u root'
-                }
-            }
+        stage('Terraform Init & Apply') {
             steps {
                 script {
                     try {
-                        dir("${TF_DIR}") {
-                            sh 'sudo terraform apply -auto-approve'
-                        }
+                        sh "sudo docker run --rm -v \$PWD/${TF_DIR}:/workspace -w /workspace hashicorp/terraform:1.7.5 init"
+                        sh "sudo docker run --rm -v \$PWD/${TF_DIR}:/workspace -w /workspace hashicorp/terraform:1.7.5 apply -auto-approve"
                         env.INSTANCE_CREATED = "true"
                     } catch (err) {
-                        echo ":x:: Terraform Apply failed: ${err}"
-                        error("Stopping pipeline due to Terraform failure")
+                        echo ":x: Terraform apply failed: ${err}"
+                        error("Stopping pipeline.")
                     }
                 }
             }
@@ -43,31 +23,25 @@ pipeline {
         stage('Generate Inventory') {
             steps {
                 script {
-                    try {
-                        def ip = sh(script: "sudo terraform -chdir=${TF_DIR} output -raw instance_ip", returnStdout: true).trim()
-                        writeFile file: "${ANSIBLE_DIR}/inventory.ini", text: """[app]\n${ip} ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_KEY}"""
-                        echo ":white_check_mark:: Generated inventory with IP: ${ip}"
-                    } catch (err) {
-                        echo ":x:: Inventory generation failed: ${err}"
-                        error("Stopping pipeline due to inventory failure")
-                    }
+                    def ip = sh(script: "sudo docker run --rm -v \$PWD/${TF_DIR}:/workspace -w /workspace hashicorp/terraform:1.7.5 output -raw instance_ip", returnStdout: true).trim()
+                    writeFile file: "${ANSIBLE_DIR}/inventory.ini", text: """[app]\n${ip} ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_KEY}"""
                 }
             }
         }
         stage('Provision & Deploy (Ansible)') {
-            agent {
-                docker {
-                    image 'willhallonline/ansible:latest'
-                    args '-v $WORKSPACE:/workspace -u root'
-                }
-            }
             steps {
                 script {
                     try {
-                        sh "ANSIBLE_GIT_TOKEN=${GIT_TOKEN} ansible-playbook -vvv -i ${ANSIBLE_DIR}/inventory.ini ${ANSIBLE_DIR}/site.yml"
+                        sh """
+                          sudo docker run --rm \
+                          -v \$PWD:/workspace -w /workspace \
+                          -e ANSIBLE_GIT_TOKEN=${GIT_TOKEN} \
+                          willhallonline/ansible:latest \
+                          ansible-playbook -vvv -i ${ANSIBLE_DIR}/inventory.ini ${ANSIBLE_DIR}/site.yml
+                        """
                     } catch (err) {
-                        echo ":x:: Ansible Provisioning/Deployment failed: ${err}"
-                        error("Stopping pipeline due to Ansible failure")
+                        echo ":x: Ansible failed: ${err}"
+                        error("Stopping pipeline.")
                     }
                 }
             }
@@ -77,17 +51,19 @@ pipeline {
         failure {
             script {
                 if (env.INSTANCE_CREATED == "true") {
-                    echo ":broom:: Cleanup: Destroying EC2 instance..."
-                    dir("${TF_DIR}") {
-                        sh 'sudo terraform destroy -auto-approve || true'
-                    }
-                } else {
-                    echo ":information_source:: No EC2 created, skipping destroy"
+                    echo ":broom: Cleaning up EC2 instance..."
+                    sh "sudo docker run --rm -v \$PWD/${TF_DIR}:/workspace -w /workspace hashicorp/terraform:1.7.5 destroy -auto-approve || true"
                 }
             }
         }
         success {
-            echo ":white_check_mark:: Pipeline complete. Infrastructure and App deployed."
+            echo ":white_check_mark: Deployment pipeline completed successfully."
         }
     }
 }
+
+
+
+
+
+
