@@ -27,6 +27,7 @@ data "aws_security_group" "default" {
     name   = "group-name"
     values = ["default"]
   }
+availability_zone = "us-east-2a"
 }
 # EC2 instance resource
 resource "aws_instance" "app_server" {
