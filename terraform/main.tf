@@ -1,18 +1,27 @@
 provider "aws" {
-  region     = "us-east-2"  
+  region = "us-east-2" 
+}
+# Fetch the default VPC
+data "aws_vpc" "default" {
+  default = true
+}
+# Fetch one of the default subnets in that VPC (you can fetch all if needed)
+data "aws_subnet_ids" "default" {
+  vpc_id = data.aws_vpc.default.id
+}
+data "aws_subnet" "default" {
+  id = tolist(data.aws_subnet_ids.default.ids)[0] 
 }
 resource "aws_instance" "app_server" {
-  ami                    = "ami-019eeff96c2865995"  
+  ami                    = "ami-019eeff96c2865995"
   instance_type          = "t3.micro"
-  key_name               = var.existing_key_name     # Use existing EC2 key pair
-  subnet_id              = var.subnet_id             
-  vpc_security_group_ids = [var.security_group_id]   # Attach existing SG
-  associate_public_ip_address = true
+  key_name               = var.existing_key_name
+  subnet_id              = data.aws_subnet.default.id
+  vpc_security_group_ids = [var.security_group_id]
   tags = {
     Name = "AppServerFromJenkins"
   }
-  
 }
 output "instance_ip" {
-  value = aws_instance.app_server.public_ip 
+  value = aws_instance.app_server.public_ip
 }
