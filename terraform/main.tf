@@ -15,6 +15,7 @@ data "aws_subnet" "default" {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
   }
+  availability_zone = "us-east-2a" 
 }
 resource "aws_instance" "app_server" {
   ami                    = "ami-019eeff96c2865995"
