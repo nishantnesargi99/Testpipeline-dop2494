@@ -5,7 +5,7 @@ provider "aws" {
 data "aws_vpc" "default" {
   default = true
 }
-# Filter a single subnet in that VPC and in desired AZ
+# Filter a single subnet from default VPC in us-east-2a
 data "aws_subnet" "default_az2a" {
   filter {
     name   = "vpc-id"
@@ -15,15 +15,8 @@ data "aws_subnet" "default_az2a" {
     name   = "availability-zone"
     values = ["us-east-2a"]
   }
-  # optional: ensure only subnets that are available
-  filter {
-    name   = "state"
-    values = ["available"]
-  }
-  # This ensures you get just one match
-  most_recent = true
 }
-# Use the default security group for that VPC
+# Use the default security group of that VPC
 data "aws_security_group" "default" {
   filter {
     name   = "vpc-id"
@@ -34,7 +27,7 @@ data "aws_security_group" "default" {
     values = ["default"]
   }
 }
-# Create EC2 instance
+# EC2 Instance
 resource "aws_instance" "app_server" {
   ami                    = "ami-019eeff96c2865995"
   instance_type          = "t3.micro"
