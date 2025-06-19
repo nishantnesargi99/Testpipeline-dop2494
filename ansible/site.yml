@@ -31,7 +31,7 @@
         state: present
     - name: Add OpenResty APT repo
       apt_repository:
-        repo: "deb http://openresty.org/package/ubuntu $(lsb_release -sc) main"
+        repo: "deb http://openresty.org/package/ubuntu {{ ansible_distribution_release }} main"
         state: present 
         filename: "openresty"
     - name: Install OpenResty
