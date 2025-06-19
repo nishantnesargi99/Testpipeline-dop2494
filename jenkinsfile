@@ -5,7 +5,8 @@ pipeline {
     environment {
         TF_DIR = "terraform"
         ANSIBLE_DIR = "ansible"
-        GIT_TOKEN = credentials('github-access')
+        SSH_KEY = credentials('ec2-ssh-key1')         // Jenkins File credential (PEM file)
+        GIT_TOKEN = credentials('github-access')     // GitHub token from Jenkins credentials
     }
     stages {
         stage('Terraform Init & Apply') {
@@ -26,7 +27,8 @@ pipeline {
             steps {
                 script {
                     def ip = sh(script: "sudo docker run --rm -v \$PWD/${TF_DIR}:/workspace -w /workspace hashicorp/terraform:1.7.5 output -raw instance_ip", returnStdout: true).trim()
-                    writeFile file: "${ANSIBLE_DIR}/inventory.ini", text: """[app]\n${ip} ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_KEY}"""
+                    writeFile file: "${ANSIBLE_DIR}/inventory.ini", text: """[app]\n${ip} ansible_user=ubuntu ansible_ssh_private_key_file=/workspace/${SSH_KEY}"""
+                    echo ":white_check_mark: Inventory generated with IP: ${ip}"
                 }
             }
         }
@@ -63,9 +65,3 @@ pipeline {
         }
     }
 }
-
-
-
-
-
-
