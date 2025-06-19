@@ -26,16 +26,16 @@
         enabled: true
         state: started
     - name: Add OpenResty GPG key
-      apt_key:
+      ansible.builtin.apt_key:
         url: "https://openresty.org/package/pubkey.gpg"
         state: present
     - name: Add OpenResty APT repo
-      apt_repository:
-        repo: "deb http://openresty.org/package/ubuntu {{ ansible_distribution_release }} main"
+      ansible.builtin.apt_repository:
+        repo: "deb http://openresty.org/package/ubuntu bionic main"
         state: present 
         filename: "openresty"
     - name: Install OpenResty
-      apt:
+     ansible.builtin.apt:
         name: openresty
         state: present
         update_cache: yes
