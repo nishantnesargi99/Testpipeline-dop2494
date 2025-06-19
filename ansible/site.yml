@@ -49,13 +49,13 @@
         dest: /opt/
         remote_src: yes
 
-   - name: Build and install OpenResty
-     shell: |
-       cd /opt/openresty-* &&
-       ./configure --prefix=/opt/openresty &&
-       make && make install
-     args:
-       executable: /bin/bash
+    - name: Build and install OpenResty
+      shell: |
+        cd /opt/openresty-* &&
+        ./configure --prefix=/opt/openresty &&
+        make && make install
+      args:
+        executable: /bin/bash
 
     - name: Clone the application repository
       git:
