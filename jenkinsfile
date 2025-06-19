@@ -1,20 +1,23 @@
 pipeline {
     agent {
-        label 'TEST_APP1_AWS'
+        label 'TEST_APP1_AWS'  // :white_check_mark: Uses your Jenkins build agent label
     }
     environment {
-        TF_DIR = "terraform"
-        ANSIBLE_DIR = "ansible"
-        SSH_KEY = credentials('ec2-ssh-key1')         // Jenkins File credential (PEM file)
-        GIT_TOKEN = credentials('github-access')     // GitHub token from Jenkins credentials
+        TF_DIR = "terraform"          // :white_check_mark: Terraform files are inside the terraform/ folder
+        ANSIBLE_DIR = "ansible"       // :white_check_mark: Ansible files (site.yml, inventory) are in ansible/
+        SSH_KEY = credentials('ec2-ssh-key1')         // :white_check_mark: Jenkins credential: PEM private key (secret file)
+        GIT_TOKEN = credentials('github-access')      // :white_check_mark: Jenkins credential: GitHub token (secret text)
     }
     stages {
         stage('Terraform Init & Apply') {
             steps {
                 script {
                     try {
+                        // :white_check_mark: Initialize Terraform
                         sh "sudo docker run --rm -v \$PWD/${TF_DIR}:/workspace -w /workspace hashicorp/terraform:1.7.5 init"
+                        // :white_check_mark: Apply Terraform
                         sh "sudo docker run --rm -v \$PWD/${TF_DIR}:/workspace -w /workspace hashicorp/terraform:1.7.5 apply -auto-approve"
+                        // :white_check_mark: Flag for cleanup on failure
                         env.INSTANCE_CREATED = "true"
                     } catch (err) {
                         echo ":x: Terraform apply failed: ${err}"
@@ -26,14 +29,27 @@ pipeline {
         stage('Generate Inventory') {
             steps {
                 script {
+                    // :white_check_mark: Get public IP of EC2 instance
                     def ip = sh(
-                script: "sudo docker run --rm -v \$PWD/${TF_DIR}:/workspace -w /workspace hashicorp/terraform:1.7.5 output -raw instance_ip",
-                returnStdout: true
-            ).trim()
-            writeFile file: "${ANSIBLE_DIR}/inventory.ini", text: """[app]
-${ip} ansible_user=ubuntu ansible_ssh_private_key_file=/workspace/${SSH_KEY} ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+                        script: "sudo docker run --rm -v \$PWD/${TF_DIR}:/workspace -w /workspace hashicorp/terraform:1.7.5 output -raw instance_ip",
+                        returnStdout: true
+                    ).trim()
+                    // :white_check_mark: Write Ansible dynamic inventory
+                    writeFile file: "${ANSIBLE_DIR}/inventory.ini", text: """[app]
+${ip} ansible_user=ubuntu ansible_port=9211 ansible_ssh_private_key_file=/workspace/id_rsa ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 """
-            echo ":white_check_mark: Inventory generated with IP: ${ip}"
+                    echo ":white_check_mark: Inventory generated with IP: ${ip}"
+                }
+            }
+        }
+        stage('Prepare Workspace') {
+            steps {
+                script {
+                    // :white_check_mark: Copy Jenkins secret file to id_rsa for Ansible to use
+                    sh '''
+                    cp ${SSH_KEY} ./id_rsa
+                    chmod 600 ./id_rsa
+                    '''
                 }
             }
         }
@@ -41,21 +57,21 @@ ${ip} ansible_user=ubuntu ansible_ssh_private_key_file=/workspace/${SSH_KEY} ans
             steps {
                 script {
                     try {
+                        // :white_check_mark: Run ansible-playbook using Docker
                         sh """
                         sudo docker run --rm \
-                          -v $PWD:/workspace \
-                          -v ${SSH_KEY}:/workspace/${SSH_KEY} \
+                          -v \$PWD:/workspace \
+                          -v \$PWD/id_rsa:/workspace/id_rsa \
                           -e ANSIBLE_GIT_TOKEN=${GIT_TOKEN} \
                           willhallonline/ansible:latest \
                           ansible-playbook -vvv \
-                            -i /workspace/${ANSIBLE_DIR}/inventory.py \
+                            -i /workspace/${ANSIBLE_DIR}/inventory.ini \
                             /workspace/${ANSIBLE_DIR}/site.yml \
                             -e "ansible_user=ubuntu" \
-                            -e "ansible_ssh_private_key_file=/workspace/${SSH_KEY}" \
-                            -e "ansible_ssh_common_args='-p 9211 -o StrictHostKeyChecking=no'"
+                            -e "ansible_ssh_private_key_file=/workspace/id_rsa"
                         """
                     } catch (err) {
-                        echo ":x: Ansible failed: ${err}"
+                        echo ":x: Ansible playbook failed: ${err}"
                         error("Stopping pipeline.")
                     }
                 }
@@ -72,7 +88,7 @@ ${ip} ansible_user=ubuntu ansible_ssh_private_key_file=/workspace/${SSH_KEY} ans
             }
         }
         success {
-            echo ":white_check_mark: Deployment pipeline completed successfully."
+            echo ":white_check_mark: All stages completed successfully!"
         }
     }
 }
