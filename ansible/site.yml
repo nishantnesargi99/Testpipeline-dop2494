@@ -3,7 +3,7 @@
   hosts: app
   become: yes
   vars:
-    app_repo: "https://oauth2:{{ lookup('env', 'ANSIBLE_GIT_TOKEN') }}@github.com/claymcenter/notification-service.git"
+    app_repo: "https://x-access-token:{{ lookup('env', 'ANSIBLE_GIT_TOKEN') }}@github.com/claymcenter/notification-service.git"
     app_dir: "/webapps/notification-service"
     docker_compose_file: "docker-compose.yml"
   tasks:
