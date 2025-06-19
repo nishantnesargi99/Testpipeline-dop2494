@@ -6,7 +6,7 @@ pipeline {
         TF_DIR = "terraform"          // :white_check_mark: Terraform files are inside the terraform/ folder
         ANSIBLE_DIR = "ansible"       // :white_check_mark: Ansible files (site.yml, inventory) are in ansible/
         SSH_KEY = credentials('ec2-ssh-key1')         // :white_check_mark: Jenkins credential: PEM private key (secret file)
-        GIT_TOKEN = credentials('github-access')      // :white_check_mark: Jenkins credential: GitHub token (secret text)
+        GIT_TOKEN = credentials('github-token')      // :white_check_mark: Jenkins credential: GitHub token (secret text)
     }
     stages {
         stage('Terraform Init & Apply') {
