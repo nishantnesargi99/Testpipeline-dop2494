@@ -25,6 +25,12 @@
         name: docker
         enabled: true
         state: started
+    - name: Install software-properties-common
+      ansible.builtin.apt:
+        name: software-properties-common
+        state: present
+        update_cache: yes
+        
     - name: Add OpenResty GPG key
       ansible.builtin.apt_key:
         url: "https://openresty.org/package/pubkey.gpg"
@@ -34,6 +40,9 @@
         repo: "deb http://openresty.org/package/ubuntu bionic main"
         state: present 
         filename: "openresty"
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes   
     - name: Install OpenResty
       ansible.builtin.apt:
         name: openresty
