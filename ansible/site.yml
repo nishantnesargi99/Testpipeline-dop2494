@@ -32,7 +32,8 @@
     - name: Add OpenResty APT repo
       apt_repository:
         repo: "deb http://openresty.org/package/ubuntu $(lsb_release -sc) main"
-        state: present filename: "openresty"
+        state: present 
+        filename: "openresty"
     - name: Install OpenResty
       apt:
         name: openresty
