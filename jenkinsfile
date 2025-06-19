@@ -36,7 +36,7 @@ pipeline {
                     ).trim()
                     // :white_check_mark: Write Ansible dynamic inventory
                     writeFile file: "${ANSIBLE_DIR}/inventory.ini", text: """[app]
-${ip} ansible_user=ubuntu ansible_port=9211 ansible_ssh_private_key_file=/workspace/id_rsa ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+${ip} ansible_user=ubuntu ansible_port=22 ansible_ssh_private_key_file=/workspace/id_rsa ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 """
                     echo ":white_check_mark: Inventory generated with IP: ${ip}"
                 }
