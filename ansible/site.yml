@@ -25,6 +25,7 @@
           - perl
           - make
           - build-essential
+          - libssl-dev
         state: present
         update_cache: yes
     - name: Enable and start Docker
