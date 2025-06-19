@@ -35,7 +35,7 @@
         state: present 
         filename: "openresty"
     - name: Install OpenResty
-     ansible.builtin.apt:
+      ansible.builtin.apt:
         name: openresty
         state: present
         update_cache: yes
