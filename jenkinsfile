@@ -42,11 +42,12 @@ ${ip} ansible_user=ubuntu ansible_ssh_private_key_file=/workspace/${SSH_KEY} ans
                 script {
                     try {
                         sh """
-                          sudo docker run --rm \
-                          -v \$PWD:/workspace -w /workspace \
-                          -e ANSIBLE_GIT_TOKEN=${GIT_TOKEN} \
-                          willhallonline/ansible:latest \
-                          ansible-playbook -vvv -i ${ANSIBLE_DIR}/inventory.ini ${ANSIBLE_DIR}/site.yml
+                            sudo docker run --rm \
+                            -v \$PWD:/workspace \
+                            -v ${SSH_KEY}:/workspace/${SSH_KEY} \\
+                            -e ANSIBLE_GIT_TOKEN=${GIT_TOKEN} \
+                             willhallonline/ansible:latest \
+                             ansible-playbook -vvv -i ${ANSIBLE_DIR}/inventory.ini ${ANSIBLE_DIR}/site.yml
                         """
                     } catch (err) {
                         echo ":x: Ansible failed: ${err}"
