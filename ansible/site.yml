@@ -20,6 +20,7 @@
           - ca-certificates
           - lsb-release
         state: present
+        update_cache: yes
     - name: Enable and start Docker
       systemd:
         name: docker
@@ -32,19 +33,20 @@
         update_cache: yes
         
     - name: Add OpenResty GPG key
-      ansible.builtin.apt_key:
-        url: "https://openresty.org/package/pubkey.gpg"
-        state: present
+      ansible.builtin.get_url:
+        url: https://openresty.org/package/pubkey.gpg
+        dest: /usr/share/keyrings/openresty.gpg
+        mode: '0644'
     - name: Add OpenResty APT repo
       ansible.builtin.apt_repository:
-        repo: "deb http://openresty.org/package/ubuntu bionic main"
-        state: present 
+        repo: "deb [arch={{ ansible_architecture }} signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/ubuntu {{ ansible_lsb.codename | lower }} main"
         filename: "openresty"
+        state: present 
     - name: Update apt cache
       ansible.builtin.apt:
         update_cache: yes   
     - name: Install OpenResty
-      ansible.builtin.apt:
+      apt:
         name: openresty
         state: present
         update_cache: yes
