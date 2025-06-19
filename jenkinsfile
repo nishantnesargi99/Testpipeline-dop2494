@@ -1,5 +1,7 @@
 pipeline {
-    agent any
+    agent {
+        label 'TEST_APP1_AWS'
+    }
     environment {
         TF_DIR = "terraform"
         ANSIBLE_DIR = "ansible"
