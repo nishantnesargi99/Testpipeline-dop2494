@@ -26,6 +26,7 @@
           - make
           - build-essential
           - libssl-dev
+          - zlib1g-dev
         state: present
         update_cache: yes
     - name: Enable and start Docker
